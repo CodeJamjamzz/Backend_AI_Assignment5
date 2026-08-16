@@ -2,15 +2,17 @@
 
 import hashlib
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any
+
 from bs4 import BeautifulSoup
+
 from scraper.fetcher import PoliteFetcher
 
 
 class BookExtractor:
     """Extracts raw provenance-rich book records from detail HTML pages."""
 
-    def __init__(self, fetcher: Optional[PoliteFetcher] = None):
+    def __init__(self, fetcher: PoliteFetcher | None = None):
         self.fetcher = fetcher or PoliteFetcher()
 
     @staticmethod
@@ -28,8 +30,8 @@ class BookExtractor:
         html_content: str,
         product_url: str,
         source_page: str,
-        fetched_at: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        fetched_at: str | None = None,
+    ) -> dict[str, Any]:
         """
         Parses a book detail page HTML and extracts raw untransformed fields.
         Selectors are aimed specifically at the product section of the document.
@@ -62,7 +64,7 @@ class BookExtractor:
         # Description: #product_description + p or #product_description ~ p
         # If absent or empty, store None (null in JSON) — never invent text
         desc_heading = soup.select_one("#product_description")
-        description: Optional[str] = None
+        description: str | None = None
         if desc_heading:
             desc_p = desc_heading.find_next_sibling("p")
             if desc_p:
@@ -89,7 +91,7 @@ class BookExtractor:
         product_url: str,
         source_page: str,
         force_refresh: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Fetch (or read from cache) and extract a single book record."""
         cache_filename = self._generate_cache_key(product_url)
         html_content, _, _, _ = self.fetcher.fetch(
@@ -105,16 +107,16 @@ class BookExtractor:
 
     def extract_all(
         self,
-        discovered_items: List[Dict[str, str]],
+        discovered_items: list[dict[str, str]],
         force_refresh: bool = False,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Fetches and extracts raw records for all discovered book items.
 
         Args:
             discovered_items: List of dicts with keys {'url', 'source_page'}
         """
-        records: List[Dict[str, Any]] = []
+        records: list[dict[str, Any]] = []
         for item in discovered_items:
             url = item["url"]
             source_page = item.get("source_page", "")

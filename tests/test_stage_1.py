@@ -1,8 +1,9 @@
 """Tests for Stage 1: Fetch and cache HTML."""
 
 import os
-import shutil
+
 import pytest
+
 from scraper.fetcher import PoliteFetcher
 
 

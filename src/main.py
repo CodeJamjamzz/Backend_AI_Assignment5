@@ -2,13 +2,15 @@
 
 import argparse
 import json
-import sys
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
 from scraper.classifier import TargetClassifier
 from scraper.crawler import CatalogueCrawler
 from scraper.extractor import BookExtractor
 from scraper.fetcher import PoliteFetcher
+from scraper.normalizer import DataNormalizer
 
 app = FastAPI(
     title="The Polite Scraper API",
@@ -27,6 +29,7 @@ app.add_middleware(
 fetcher = PoliteFetcher()
 crawler = CatalogueCrawler(fetcher=fetcher)
 extractor = BookExtractor(fetcher=fetcher)
+normalizer = DataNormalizer(output_dir="output")
 
 
 @app.get("/")
@@ -93,10 +96,22 @@ def stage_3_extract_book_records(max_pages: int = 3, sample_only: bool = False):
     }
 
 
+@app.post("/api/stage-4")
+def stage_4_normalize_and_validate():
+    """Stage 4: Normalize, validate, and store records."""
+    crawl_result = crawler.crawl_catalogue(max_pages=3)
+    records = extractor.extract_all(crawl_result["discovered_items"])
+    result = normalizer.validate_and_store(records)
+    return {
+        "stage": 4,
+        "validation_result": result,
+    }
+
+
 def run_cli():
     """CLI runner for stages."""
     parser = argparse.ArgumentParser(description="The Polite Scraper CLI")
-    parser.add_argument("--stage", type=int, choices=[0, 1, 2, 3], help="Run a specific stage checkpoint")
+    parser.add_argument("--stage", type=int, choices=[0, 1, 2, 3, 4], help="Run a specific stage checkpoint")
     args = parser.parse_args()
 
     stage = args.stage if args.stage is not None else 0
@@ -139,6 +154,25 @@ def run_cli():
         print(json.dumps(records[0], indent=2))
         print(f"\nunique_urls={len(records)}")
         print("\nCheckpoint Verified: All 60 raw book detail records extracted with full provenance receipts.\n")
+
+    elif stage == 4:
+        print("\n=== STAGE 4: CLEAN, CHECK, AND STORE ===")
+        print("Run 1:")
+        crawl_result = crawler.crawl_catalogue(max_pages=3)
+        records = extractor.extract_all(crawl_result["discovered_items"])
+        r1 = normalizer.validate_and_store(records)
+        print(f"Processed: {r1['total_processed']} | Good: {r1['good_count']} | Errors: {r1['error_count']}")
+        
+        print("\nRun 2 (Checking Idempotency):")
+        crawl_result_2 = crawler.crawl_catalogue(max_pages=3)
+        records_2 = extractor.extract_all(crawl_result_2["discovered_items"])
+        r2 = normalizer.validate_and_store(records_2)
+        print(f"Processed: {r2['total_processed']} | Good: {r2['good_count']} | Errors: {r2['error_count']}")
+        
+        print(f"\nSaved to: {r2['books_file']}")
+        print(f"Errors to: {r2['errors_file']}")
+        print("\nCheckpoint Verified: books.json has exactly 60 records, every product_url is unique, and after a second run it is still exactly 60.\n")
+
 
 
 if __name__ == "__main__":

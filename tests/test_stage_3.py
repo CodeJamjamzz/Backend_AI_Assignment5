@@ -1,6 +1,7 @@
 """Tests for Stage 3: Extract raw book records."""
 
 import pytest
+
 from scraper.crawler import CatalogueCrawler
 from scraper.extractor import BookExtractor
 from scraper.fetcher import PoliteFetcher

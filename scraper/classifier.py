@@ -2,7 +2,7 @@
 
 import urllib.error
 import urllib.request
-from typing import Dict, Any
+from typing import Any
 
 
 class TargetClassifier:
@@ -15,7 +15,7 @@ class TargetClassifier:
     TOTAL_BOOKS_SCOPE = 60
 
     @classmethod
-    def check_robots_txt(cls) -> Dict[str, Any]:
+    def check_robots_txt(cls) -> dict[str, Any]:
         """Request the target robots.txt file to determine crawler policies."""
         headers = {"User-Agent": "PoliteScraper/1.0 (FlyRank Assignment 5; respectful sandbox scraper)"}
         req = urllib.request.Request(cls.ROBOTS_URL, headers=headers)
@@ -42,16 +42,16 @@ class TargetClassifier:
                 "content": "",
                 "summary": f"HTTP error {e.code} while fetching robots.txt",
             }
-        except Exception as e:
+        except urllib.error.URLError as e:
             return {
                 "status_code": None,
                 "found": False,
                 "content": "",
-                "summary": f"Connection error: {str(e)}",
+                "summary": f"Connection error: {e!s}",
             }
 
     @classmethod
-    def get_target_classification(cls) -> Dict[str, Any]:
+    def get_target_classification(cls) -> dict[str, Any]:
         """Return the target classification metadata."""
         robots_result = cls.check_robots_txt()
         return {

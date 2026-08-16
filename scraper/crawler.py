@@ -1,8 +1,10 @@
 """Catalogue crawler for discovering book links across paginated catalogue pages."""
 
-from typing import Any, Dict, List, Optional, Set
+from typing import Any
 from urllib.parse import urljoin
+
 from bs4 import BeautifulSoup
+
 from scraper.fetcher import PoliteFetcher
 
 
@@ -11,16 +13,16 @@ class CatalogueCrawler:
 
     DEFAULT_START_URL = "https://books.toscrape.com/catalogue/page-1.html"
 
-    def __init__(self, fetcher: Optional[PoliteFetcher] = None):
+    def __init__(self, fetcher: PoliteFetcher | None = None):
         self.fetcher = fetcher or PoliteFetcher()
 
-    def extract_book_links(self, html_content: str, page_url: str) -> List[str]:
+    def extract_book_links(self, html_content: str, page_url: str) -> list[str]:
         """
         Extracts all book detail links from a catalogue HTML page and converts
         them into absolute URLs using urllib.parse.urljoin.
         """
         soup = BeautifulSoup(html_content, "html.parser")
-        book_links: List[str] = []
+        book_links: list[str] = []
 
         for article in soup.select("article.product_pod"):
             h3_link = article.select_one("h3 a")
@@ -31,7 +33,7 @@ class CatalogueCrawler:
 
         return book_links
 
-    def extract_next_page_url(self, html_content: str, current_page_url: str) -> Optional[str]:
+    def extract_next_page_url(self, html_content: str, current_page_url: str) -> str | None:
         """
         Extracts the 'next' pagination link from a catalogue HTML page
         and converts it into an absolute URL.
@@ -48,15 +50,15 @@ class CatalogueCrawler:
         start_url: str = DEFAULT_START_URL,
         max_pages: int = 3,
         force_refresh: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Crawls up to `max_pages` catalogue pages, collecting all book links,
         deduplicating them, and respecting polite delays.
         """
-        current_url: Optional[str] = start_url
+        current_url: str | None = start_url
         page_index = 1
-        all_book_links: List[str] = []
-        visited_pages: List[str] = []
+        all_book_links: list[str] = []
+        visited_pages: list[str] = []
 
         while current_url and page_index <= max_pages:
             cache_file = f"catalogue-page-{page_index}.html"
@@ -76,9 +78,9 @@ class CatalogueCrawler:
             page_index += 1
 
         # Deduplicate while preserving discovery order
-        seen: Set[str] = set()
-        unique_book_links: List[str] = []
-        discovered_items: List[Dict[str, str]] = []
+        seen: set[str] = set()
+        unique_book_links: list[str] = []
+        discovered_items: list[dict[str, str]] = []
         for item in all_book_links:
             url = item["url"]
             if url not in seen:

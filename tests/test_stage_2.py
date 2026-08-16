@@ -1,6 +1,7 @@
 """Tests for Stage 2: Discover three catalogue pages and book URLs."""
 
 import pytest
+
 from scraper.crawler import CatalogueCrawler
 from scraper.fetcher import PoliteFetcher
 

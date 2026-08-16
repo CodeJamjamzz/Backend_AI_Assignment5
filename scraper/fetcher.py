@@ -2,7 +2,7 @@
 
 import os
 import time
-from typing import Optional, Tuple
+
 import requests
 
 
@@ -16,7 +16,7 @@ class PoliteFetcher:
     def __init__(
         self,
         cache_dir: str = "cache",
-        user_agent: Optional[str] = None,
+        user_agent: str | None = None,
         timeout: float = DEFAULT_TIMEOUT_SECONDS,
         polite_delay: float = DEFAULT_POLITE_DELAY_SECONDS,
     ):
@@ -39,9 +39,9 @@ class PoliteFetcher:
     def fetch(
         self,
         url: str,
-        cache_filename: Optional[str] = None,
+        cache_filename: str | None = None,
         force_refresh: bool = False,
-    ) -> Tuple[str, bool, int, int]:
+    ) -> tuple[str, bool, int, int]:
         """
         Fetch HTML content from cache or live network.
 

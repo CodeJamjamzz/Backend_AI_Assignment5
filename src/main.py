@@ -206,7 +206,8 @@ def run_cli():
             "cache_hits": cache_hits,
             "valid_records": validation_result["good_count"],
             "invalid_records": validation_result["error_count"],
-            "failed_pages": len(failed_urls)
+            "failed_pages": len(failed_urls),
+            "changes": validation_result.get("changes", {})
         }
         
         report_path = "output/run-report.json"

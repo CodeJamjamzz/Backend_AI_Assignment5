@@ -21,7 +21,7 @@ def test_stage_3_extract_single_record(temp_environment):
     url = "https://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html"
     source = "https://books.toscrape.com/catalogue/page-1.html"
 
-    record = extractor.fetch_and_extract_book(product_url=url, source_page=source)
+    record, _ = extractor.fetch_and_extract_book(product_url=url, source_page=source)
 
     assert record["title"] == "A Light in the Attic"
     assert record["product_url"] == url

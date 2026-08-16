@@ -1,10 +1,7 @@
 import json
 import os
-import pytest
-from pydantic import HttpUrl
 
 from scraper.normalizer import DataNormalizer
-from scraper.schema import BookSchema
 
 
 def test_normalizer_price_parsing():

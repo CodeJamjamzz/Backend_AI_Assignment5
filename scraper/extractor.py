@@ -133,7 +133,7 @@ class BookExtractor:
                 records.append(record)
                 if is_cache_hit:
                     cache_hits += 1
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 print(f"[EXTRACTION ERROR] Skipping {url} due to error: {e}")
                 failed_urls.append(url)
                 

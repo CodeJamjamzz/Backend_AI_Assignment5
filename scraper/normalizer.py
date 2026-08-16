@@ -81,7 +81,7 @@ class DataNormalizer:
                     "raw_record": raw,
                     "errors": json.loads(e.json())
                 })
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 errors.append({
                     "raw_record": raw,
                     "errors": str(e)
@@ -100,8 +100,8 @@ class DataNormalizer:
             try:
                 with open(books_path, "r", encoding="utf-8") as f:
                     old_records = json.load(f)
-            except Exception:
-                pass
+            except (OSError, json.JSONDecodeError):
+                old_records = []
                 
         changes = self._compute_changes(old_records, final_good)
 

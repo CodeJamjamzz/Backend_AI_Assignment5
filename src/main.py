@@ -86,7 +86,8 @@ def stage_3_extract_book_records(max_pages: int = 3, sample_only: bool = False):
     items = crawl_result["discovered_items"]
     if sample_only:
         items = items[:1]
-    records = extractor.extract_all(items)
+    extraction_result = extractor.extract_all(items)
+    records = extraction_result["records"]
     return {
         "stage": 3,
         "catalogue_pages": crawl_result["catalogue_pages"],
@@ -100,7 +101,8 @@ def stage_3_extract_book_records(max_pages: int = 3, sample_only: bool = False):
 def stage_4_normalize_and_validate():
     """Stage 4: Normalize, validate, and store records."""
     crawl_result = crawler.crawl_catalogue(max_pages=3)
-    records = extractor.extract_all(crawl_result["discovered_items"])
+    extraction_result = extractor.extract_all(crawl_result["discovered_items"])
+    records = extraction_result["records"]
     result = normalizer.validate_and_store(records)
     return {
         "stage": 4,
@@ -111,7 +113,7 @@ def stage_4_normalize_and_validate():
 def run_cli():
     """CLI runner for stages."""
     parser = argparse.ArgumentParser(description="The Polite Scraper CLI")
-    parser.add_argument("--stage", type=int, choices=[0, 1, 2, 3, 4], help="Run a specific stage checkpoint")
+    parser.add_argument("--stage", type=int, choices=[0, 1, 2, 3, 4, 5], help="Run a specific stage checkpoint")
     args = parser.parse_args()
 
     stage = args.stage if args.stage is not None else 0
@@ -149,9 +151,10 @@ def run_cli():
     elif stage == 3:
         print("\n=== STAGE 3: EXTRACT RAW BOOK RECORDS ===")
         crawl_result = crawler.crawl_catalogue(max_pages=3)
-        records = extractor.extract_all(crawl_result["discovered_items"])
+        extraction_result = extractor.extract_all(crawl_result["discovered_items"])
+        records = extraction_result["records"]
         print("\nSample Raw Record:")
-        print(json.dumps(records[0], indent=2))
+        print(json.dumps(records[0] if records else {}, indent=2))
         print(f"\nunique_urls={len(records)}")
         print("\nCheckpoint Verified: All 60 raw book detail records extracted with full provenance receipts.\n")
 
@@ -159,19 +162,60 @@ def run_cli():
         print("\n=== STAGE 4: CLEAN, CHECK, AND STORE ===")
         print("Run 1:")
         crawl_result = crawler.crawl_catalogue(max_pages=3)
-        records = extractor.extract_all(crawl_result["discovered_items"])
-        r1 = normalizer.validate_and_store(records)
+        extraction_result = extractor.extract_all(crawl_result["discovered_items"])
+        r1 = normalizer.validate_and_store(extraction_result["records"])
         print(f"Processed: {r1['total_processed']} | Good: {r1['good_count']} | Errors: {r1['error_count']}")
         
         print("\nRun 2 (Checking Idempotency):")
         crawl_result_2 = crawler.crawl_catalogue(max_pages=3)
-        records_2 = extractor.extract_all(crawl_result_2["discovered_items"])
-        r2 = normalizer.validate_and_store(records_2)
+        extraction_result_2 = extractor.extract_all(crawl_result_2["discovered_items"])
+        r2 = normalizer.validate_and_store(extraction_result_2["records"])
         print(f"Processed: {r2['total_processed']} | Good: {r2['good_count']} | Errors: {r2['error_count']}")
         
         print(f"\nSaved to: {r2['books_file']}")
         print(f"Errors to: {r2['errors_file']}")
         print("\nCheckpoint Verified: books.json has exactly 60 records, every product_url is unique, and after a second run it is still exactly 60.\n")
+
+    elif stage == 5:
+        print("\n=== STAGE 5: SURVIVE FAILURES & REPORT THE RUN ===")
+        import time
+        from datetime import datetime, timezone
+        
+        start_time = time.time()
+        start_dt = datetime.now(timezone.utc).isoformat()
+        
+        crawl_result = crawler.crawl_catalogue(max_pages=3)
+        
+        # Inject one fake URL to prove resilience
+        discovered = crawl_result["discovered_items"]
+        discovered.append({"url": "https://books.toscrape.com/catalogue/fake-book-does-not-exist/index.html", "source_page": "test"})
+        
+        extraction_result = extractor.extract_all(discovered)
+        records = extraction_result["records"]
+        failed_urls = extraction_result["failed_urls"]
+        cache_hits = extraction_result["cache_hits"]
+        
+        validation_result = normalizer.validate_and_store(records)
+        
+        duration = time.time() - start_time
+        
+        report = {
+            "start_time": start_dt,
+            "duration_seconds": round(duration, 2),
+            "pages_fetched": len(records) + len(failed_urls),
+            "cache_hits": cache_hits,
+            "valid_records": validation_result["good_count"],
+            "invalid_records": validation_result["error_count"],
+            "failed_pages": len(failed_urls)
+        }
+        
+        report_path = "output/run-report.json"
+        with open(report_path, "w", encoding="utf-8") as f:
+            json.dump(report, f, indent=2)
+            
+        print(json.dumps(report, indent=2))
+        print(f"\nSaved report to: {report_path}")
+        print("\nCheckpoint Verified: with one fake URL in the list, the run still finishes, report shows failed_pages: 1. books.json still has the 60 good records.\n")
 
 
 

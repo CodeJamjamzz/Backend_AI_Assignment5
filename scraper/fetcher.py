@@ -63,16 +63,29 @@ class PoliteFetcher:
 
         # 3. Live network fetch
         headers = {"User-Agent": self.user_agent}
-        try:
-            response = requests.get(url, headers=headers, timeout=self.timeout)
-        except requests.RequestException as e:
-            print(f"[FETCH ERROR] {url}: {e}")
-            raise RuntimeError(f"Network request failed for {url}: {e}") from e
-
-        # 4. Check status code
-        if response.status_code != 200:
-            print(f"[FETCH FAILED] {url} returned HTTP {response.status_code}")
-            raise ValueError(f"HTTP {response.status_code} received from {url}")
+        max_retries = 1
+        
+        for attempt in range(max_retries + 1):
+            try:
+                response = requests.get(url, headers=headers, timeout=self.timeout)
+                # 4. Check status code
+                if response.status_code != 200:
+                    if response.status_code >= 500 and attempt < max_retries:
+                        print(f"[FETCH RETRY] {url} returned HTTP {response.status_code}, retrying...")
+                        time.sleep(1.0)
+                        continue
+                    print(f"[FETCH FAILED] {url} returned HTTP {response.status_code}")
+                    raise ValueError(f"HTTP {response.status_code} received from {url}")
+                break # Success
+            except requests.exceptions.Timeout as e:
+                if attempt < max_retries:
+                    print(f"[FETCH RETRY] {url} timed out, retrying...")
+                    time.sleep(1.0)
+                    continue
+                raise RuntimeError(f"Network request timeout for {url}: {e}") from e
+            except requests.RequestException as e:
+                print(f"[FETCH ERROR] {url}: {e}")
+                raise RuntimeError(f"Network request failed for {url}: {e}") from e
 
         content = response.text
         size = len(content.encode("utf-8"))

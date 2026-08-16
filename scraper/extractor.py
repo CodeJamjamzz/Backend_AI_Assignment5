@@ -91,25 +91,26 @@ class BookExtractor:
         product_url: str,
         source_page: str,
         force_refresh: bool = False,
-    ) -> dict[str, Any]:
+    ) -> tuple[dict[str, Any], bool]:
         """Fetch (or read from cache) and extract a single book record."""
         cache_filename = self._generate_cache_key(product_url)
-        html_content, _, _, _ = self.fetcher.fetch(
+        html_content, is_cache_hit, _, _ = self.fetcher.fetch(
             product_url,
             cache_filename=cache_filename,
             force_refresh=force_refresh,
         )
-        return self.extract_raw_record(
+        record = self.extract_raw_record(
             html_content=html_content,
             product_url=product_url,
             source_page=source_page,
         )
+        return record, is_cache_hit
 
     def extract_all(
         self,
         discovered_items: list[dict[str, str]],
         force_refresh: bool = False,
-    ) -> list[dict[str, Any]]:
+    ) -> dict[str, Any]:
         """
         Fetches and extracts raw records for all discovered book items.
 
@@ -117,13 +118,27 @@ class BookExtractor:
             discovered_items: List of dicts with keys {'url', 'source_page'}
         """
         records: list[dict[str, Any]] = []
+        failed_urls: list[str] = []
+        cache_hits = 0
+
         for item in discovered_items:
             url = item["url"]
             source_page = item.get("source_page", "")
-            record = self.fetch_and_extract_book(
-                product_url=url,
-                source_page=source_page,
-                force_refresh=force_refresh,
-            )
-            records.append(record)
-        return records
+            try:
+                record, is_cache_hit = self.fetch_and_extract_book(
+                    product_url=url,
+                    source_page=source_page,
+                    force_refresh=force_refresh,
+                )
+                records.append(record)
+                if is_cache_hit:
+                    cache_hits += 1
+            except Exception as e:
+                print(f"[EXTRACTION ERROR] Skipping {url} due to error: {e}")
+                failed_urls.append(url)
+                
+        return {
+            "records": records,
+            "failed_urls": failed_urls,
+            "cache_hits": cache_hits
+        }

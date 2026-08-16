@@ -37,6 +37,7 @@ yarn-error.log*
 .pnpm-debug.log*
 
 # Environment variables & secrets
+cache/
 .env
 .env.local
 .env.*.local

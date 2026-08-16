@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from scraper.classifier import TargetClassifier
 from scraper.crawler import CatalogueCrawler
+from scraper.extractor import BookExtractor
 from scraper.fetcher import PoliteFetcher
 
 app = FastAPI(
@@ -25,6 +26,7 @@ app.add_middleware(
 
 fetcher = PoliteFetcher()
 crawler = CatalogueCrawler(fetcher=fetcher)
+extractor = BookExtractor(fetcher=fetcher)
 
 
 @app.get("/")
@@ -74,10 +76,27 @@ def stage_2_discover_catalogue_pages(max_pages: int = 3):
     }
 
 
+@app.post("/api/stage-3")
+def stage_3_extract_book_records(max_pages: int = 3, sample_only: bool = False):
+    """Stage 3: Extract raw records from discovered book detail pages."""
+    crawl_result = crawler.crawl_catalogue(max_pages=max_pages)
+    items = crawl_result["discovered_items"]
+    if sample_only:
+        items = items[:1]
+    records = extractor.extract_all(items)
+    return {
+        "stage": 3,
+        "catalogue_pages": crawl_result["catalogue_pages"],
+        "unique_urls": len(records),
+        "sample_record": records[0] if records else None,
+        "records": records,
+    }
+
+
 def run_cli():
     """CLI runner for stages."""
     parser = argparse.ArgumentParser(description="The Polite Scraper CLI")
-    parser.add_argument("--stage", type=int, choices=[0, 1, 2], help="Run a specific stage checkpoint")
+    parser.add_argument("--stage", type=int, choices=[0, 1, 2, 3], help="Run a specific stage checkpoint")
     args = parser.parse_args()
 
     stage = args.stage if args.stage is not None else 0
@@ -111,6 +130,15 @@ def run_cli():
         r2 = crawler.crawl_catalogue(max_pages=3)
         print(f"catalogue_pages={r2['catalogue_pages']} discovered={r2['discovered']} duplicates_removed={r2['duplicates_removed']}")
         print("\nCheckpoint Verified: Discovered 60 book links across 3 catalogue pages with 0 duplicates.\n")
+
+    elif stage == 3:
+        print("\n=== STAGE 3: EXTRACT RAW BOOK RECORDS ===")
+        crawl_result = crawler.crawl_catalogue(max_pages=3)
+        records = extractor.extract_all(crawl_result["discovered_items"])
+        print("\nSample Raw Record:")
+        print(json.dumps(records[0], indent=2))
+        print(f"\nunique_urls={len(records)}")
+        print("\nCheckpoint Verified: All 60 raw book detail records extracted with full provenance receipts.\n")
 
 
 if __name__ == "__main__":

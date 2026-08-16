@@ -2,6 +2,7 @@
 
 from scraper.classifier import TargetClassifier
 from scraper.crawler import CatalogueCrawler
+from scraper.extractor import BookExtractor
 from scraper.fetcher import PoliteFetcher
 
-__all__ = ["TargetClassifier", "PoliteFetcher", "CatalogueCrawler"]
+__all__ = ["TargetClassifier", "PoliteFetcher", "CatalogueCrawler", "BookExtractor"]

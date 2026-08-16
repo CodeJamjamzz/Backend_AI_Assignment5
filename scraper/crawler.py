@@ -68,7 +68,8 @@ class CatalogueCrawler:
             visited_pages.append(current_url)
 
             page_book_links = self.extract_book_links(html_content, current_url)
-            all_book_links.extend(page_book_links)
+            for link in page_book_links:
+                all_book_links.append({"url": link, "source_page": current_url})
 
             # Look up next page URL dynamically from the page markup
             current_url = self.extract_next_page_url(html_content, current_url)
@@ -77,10 +78,13 @@ class CatalogueCrawler:
         # Deduplicate while preserving discovery order
         seen: Set[str] = set()
         unique_book_links: List[str] = []
-        for link in all_book_links:
-            if link not in seen:
-                seen.add(link)
-                unique_book_links.append(link)
+        discovered_items: List[Dict[str, str]] = []
+        for item in all_book_links:
+            url = item["url"]
+            if url not in seen:
+                seen.add(url)
+                unique_book_links.append(url)
+                discovered_items.append(item)
 
         duplicates_removed = len(all_book_links) - len(unique_book_links)
 
@@ -90,5 +94,6 @@ class CatalogueCrawler:
             "total_links_found": len(all_book_links),
             "duplicates_removed": duplicates_removed,
             "book_urls": unique_book_links,
+            "discovered_items": discovered_items,
             "visited_pages": visited_pages,
         }

@@ -19,29 +19,18 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-        continue-on-error: true
 
-      - name: Install Python Dependencies & Test (if requirements.txt exists)
+      - name: Install Dependencies
         run: |
-          if [ -f requirements.txt ]; then
-            python -m pip install --upgrade pip
-            pip install -r requirements.txt
-            if command -v ruff &> /dev/null; then ruff check .; fi
-            if command -v pytest &> /dev/null; then pytest; fi
-          fi
-        shell: bash
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-        continue-on-error: true
-
-      - name: Install Node Dependencies & Test (if package.json exists)
+      - name: Run Ruff Lint Check
         run: |
-          if [ -f package.json ]; then
-            npm ci || npm install
-            if npm run | grep -q "lint"; then npm run lint; fi
-            if npm run | grep -q "test"; then npm test; fi
-          fi
-        shell: bash
+          python -m ruff check .
+
+      - name: Run Pytest Suite
+        run: |
+          python -m pytest -v
+        env:
+          PYTHONPATH: .
